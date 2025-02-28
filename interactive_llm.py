@@ -72,7 +72,7 @@ MODEL_NAME="meta-llama/Llama-3.1-8B-Instruct"
 
 prompt_formats = load_prompts()
 SYSTEM_INSTRUCTION = prompt_formats["system_instruction"]
-SYSTEM_PROMPT = prompt_formats['llama3_system_prompt_format'].format(system_instruction=SYSTEM_INSTRUCTION)
+SYSTEM_PROMPT = prompt_formats['llama3_system_prompt_format']
 INTERACTION_PROMPT = prompt_formats['llama3_interaction_prompt_format']
 
 model = LLM(model=MODEL_NAME, tensor_parallel_size=1, trust_remote_code=True)
@@ -82,38 +82,57 @@ sp = SamplingParams(temperature=0.2, top_p=0.9, max_tokens=MAX_TOKENS)
 def interact(query, gt_info, max_rounds):
     print(f"GT: {gt_info['title'].item()}\n")
     print(f"Initial Question:\n{query['description']}")
+    system_prompt = SYSTEM_PROMPT.format(system_instruction=SYSTEM_INSTRUCTION.format(summary=gt_info['summary']))
     interaction_history = ""
     interaction_history_list = []
     num_rounds = 0
     while(num_rounds < max_rounds):
         user_input = input("Query: ")
+        if user_input == "end":
+            break
         current_interaction = INTERACTION_PROMPT.format(user_prompt=user_input)
-        outputs = model.generate(prompts=[SYSTEM_PROMPT + interaction_history + current_interaction], sampling_params=sp)
+        outputs = model.generate(prompts=[system_prompt + interaction_history + current_interaction], sampling_params=sp)
         outputs = [output.outputs[0].text for output in outputs]
         response = outputs[0]
-        print("Response: {}".format(response))
+        print(f"Response:\n{response}")
         interaction_history += current_interaction + response
         interaction_history_list.append(f"Query: {user_input}")
         interaction_history_list.append(f"Response: {response}")
         num_rounds += 1
 
     print(f"INTERACTION {query['id']} END")
+    user_input = input("IS CORRECT: ")
+    got_answer = False
+    if user_input.lower().strip() in ['y' or 'yes']:
+        got_answer = True
 
     log_path = path.join(OUT_DIR, f"interaction_history_{query['id']}.txt")
-
     with open(log_path, "w") as f:
         out_obj = {
             "title" : gt_info['title'].item(),
             "init_query" : query['description'],
-            "interaction_history" : interaction_history
+            "interaction_history" : interaction_history,
+            "rounds" : num_rounds,
+            "success" : got_answer
             }
         json.dump(out_obj, f)
+    return log_path
 
 
 queries, sumrels, qrels, d_infos = load_data(DATA_DIR)
+
+qids = []
+res_paths = []
 for query in queries:
     gt_info = get_gt_info(query, sumrels, qrels, d_infos)
     if not gt_info is None:
-        interact(query, gt_info, MAX_ROUNDS)
+        log_path = interact(query, gt_info, MAX_ROUNDS)
+        qids.append(query['id'])
+        res_paths.append(log_path)
     else: 
         continue
+
+with open(path.join(OUT_DIR, f"a_meta.csv"), "w") as f:
+    f.write("qid,paths\n")
+    for id, p in zip(qids, res_paths):
+        f.write(f"{id},{p}\n")

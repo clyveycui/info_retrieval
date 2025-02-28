@@ -1,5 +1,5 @@
 {
-    "system_instruction" : "You are looking for a particular book. You will be given some information and a summary of the book to refer to. You will be asked some questions about the book, and you should answer them based on the information provided to you, and say you don't know if you do not know the answer.",
+    "system_instruction" : "You are looking for a particular book. You are given some information and a summary of the book to refer to. You will be asked some questions about the book, and you should answer them based on the information provided to you, and say you don't know if you do not know the answer.\n\n Here is the summary: {summary}",
     "llama3_system_prompt_format" : "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system_instruction}",
     "llama3_interaction_prompt_format" : "<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{user_prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
 }
