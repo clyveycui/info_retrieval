@@ -1,7 +1,7 @@
-#TODO: Add cli arguments for 
+#TODO: Add cli arguments for
 # Max tokens
 # Log file
-#TODO: Change prompts for user simulation 
+#TODO: Change prompts for user simulation
 
 from vllm import LLM, SamplingParams
 import json
@@ -26,16 +26,16 @@ def load_data(data_dir):
 
     sumrels = pd.read_csv(sumrels_path)
     qrels = pd.read_csv(qrels_path, sep='\t', names=["qid", '0', "did", "1"])
-    
+
     d_infos = pd.read_json(d_infos_path)
-    
+
     return queries, sumrels, qrels, d_infos
-    
+
 
 def load_prompts():
     with open("prompts.json", "r", encoding="utf-8") as f:
         return json.load(f)
-    
+
 def get_query_did(query, qrels):
     qid = query["id"]
     did = qrels[qrels['qid'] == qid]["did"].item()
@@ -82,7 +82,8 @@ sp = SamplingParams(temperature=0.2, top_p=0.9, max_tokens=MAX_TOKENS)
 def interact(query, gt_info, max_rounds):
     print(f"GT: {gt_info['title'].item()}\n")
     print(f"Initial Question:\n{query['description']}")
-    system_prompt = SYSTEM_PROMPT.format(system_instruction=SYSTEM_INSTRUCTION.format(summary=gt_info['summary']))
+    system_prompt = SYSTEM_PROMPT.format(system_instruction=SYSTEM_INSTRUCTION.format(summary=gt_info['summary'].item()))
+    print(system_prompt)
     interaction_history = ""
     interaction_history_list = []
     num_rounds = 0
@@ -129,7 +130,7 @@ for query in queries:
         log_path = interact(query, gt_info, MAX_ROUNDS)
         qids.append(query['id'])
         res_paths.append(log_path)
-    else: 
+    else:
         continue
 
 with open(path.join(OUT_DIR, f"a_meta.csv"), "w") as f:
